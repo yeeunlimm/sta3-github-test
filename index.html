@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini Tetris</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111827;color:#f9fafb;font:16px system-ui,sans-serif}main{display:flex;gap:18px;align-items:start}canvas{background:#030712;border:3px solid #374151;image-rendering:pixelated}h1{margin:0 0 10px;font-size:24px}p{line-height:1.7;margin:8px 0}button{padding:9px 14px;border:0;border-radius:7px;background:#22c55e;color:#062b12;font-weight:700;cursor:pointer}@media(max-width:520px){main{gap:10px;transform:scale(.9)}}
+</style>
+<main><canvas width="240" height="400"></canvas><section><h1>테트리스</h1><p>점수: <b id="score">0</b></p><button>다시 시작</button><p>← → 이동<br>↑ 회전<br>↓ 빠르게</p></section></main>
+<script>
+const c=document.querySelector('canvas'),x=c.getContext('2d'),S=20,W=12,H=20,score=document.querySelector('#score');
+const shapes=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]]],colors=['#38bdf8','#facc15','#c084fc','#fb7185','#60a5fa','#4ade80','#fb923c'];
+let board,p,pts,timer,last;
+function piece(){let n=Math.random()*shapes.length|0;return{m:shapes[n].map(r=>r.slice()),n,x:4,y:0}}
+function reset(){board=Array.from({length:H},()=>Array(W).fill(-1));p=piece();pts=0;score.textContent=0;last=0;cancelAnimationFrame(timer);timer=requestAnimationFrame(loop)}
+function hit(q,dx=0,dy=0,m=q.m){return m.some((r,y)=>r.some((v,z)=>v&&(q.x+z+dx<0||q.x+z+dx>=W||q.y+y+dy>=H||board[q.y+y+dy]?.[q.x+z+dx]>=0)))}
+function lock(){p.m.forEach((r,y)=>r.forEach((v,z)=>{if(v&&p.y+y>=0)board[p.y+y][p.x+z]=p.n}));let n=0;board=board.filter(r=>r.some(v=>v<0)||(n++,false));while(board.length<H)board.unshift(Array(W).fill(-1));if(n){pts+=n*n*100;score.textContent=pts}p=piece();if(hit(p)){alert('게임 끝! 점수: '+pts);reset()}}
+function down(){if(!hit(p,0,1))p.y++;else lock()}
+function rotate(){let m=p.m[0].map((_,i)=>p.m.map(r=>r[i]).reverse());if(!hit(p,0,0,m))p.m=m}
+function draw(){x.fillStyle='#030712';x.fillRect(0,0,c.width,c.height);let cell=(v,a,b)=>{if(v>=0){x.fillStyle=colors[v];x.fillRect(a*S+1,b*S+1,S-2,S-2)}};board.forEach((r,y)=>r.forEach((v,z)=>cell(v,z,y)));p.m.forEach((r,y)=>r.forEach((v,z)=>v&&cell(p.n,p.x+z,p.y+y)))}
+function loop(t){if(t-last>500){down();last=t}draw();timer=requestAnimationFrame(loop)}
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&!hit(p,-1))p.x--;if(e.key==='ArrowRight'&&!hit(p,1))p.x++;if(e.key==='ArrowDown')down();if(e.key==='ArrowUp')rotate();if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp'].includes(e.key))e.preventDefault()});document.querySelector('button').onclick=reset;reset();
+</script>
+</html>
