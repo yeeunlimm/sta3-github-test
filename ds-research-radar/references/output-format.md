@@ -5,7 +5,7 @@
 1. What's Happening
 2. Research Radar
 3. Research Lineage
-4. Model Radar (Climate은 Technology Radar 병행 가능)
+4. 기술 변화 (새 모델은 관련 연구 자료 안에서만 비교)
 5. Trend Radar
 6. Company Radar
 7. Event Radar
