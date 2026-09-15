@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from deduplicate import unique_items
 from scoring import score
 from slack_draft import slack_draft
-from weekly_candidates import actionability, article_text, build_report, feed_items, possible_event_clusters, watchlist_matches, wordcloud_svg
+from weekly_candidates import actionability, article_text, build_report, feed_items, korean_word_counts, possible_event_clusters, watchlist_matches, word_counts, wordcloud_svg, write_wordcloud_png
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -53,6 +53,21 @@ class WeeklyCandidateTests(unittest.TestCase):
 
     def test_wordcloud_is_empty_when_no_industry_candidates(self):
         self.assertIn("No industry candidates", wordcloud_svg(Counter()))
+
+    def test_wordcloud_counts_korean_terms_without_particles(self):
+        counts = word_counts([{"title": "임베딩 검색을 최적화", "summary": "검색은 지연시간과 비용을 함께 관리합니다."}])
+        self.assertEqual(counts["검색"], 2)
+        self.assertIn("임베딩", wordcloud_svg(counts))
+
+    def test_png_wordcloud_uses_korean_nouns(self):
+        counts = korean_word_counts([{"title": "임베딩 검색을 최적화", "summary": "검색 지연시간과 비용을 관리합니다."}])
+        self.assertIn("임베딩", counts)
+        output = ROOT / "output" / "test-wordcloud.png"
+        try:
+            write_wordcloud_png(counts, output)
+            self.assertEqual(output.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+        finally:
+            output.unlink(missing_ok=True)
 
     @patch("weekly_candidates.fetch_article")
     @patch("weekly_candidates.fetch_feed")

@@ -30,7 +30,7 @@ python scripts/weekly_candidates.py `
   --feed "GeekNews=https://news.hada.io/rss/news" `
   --cache output/weekly-cache.json `
   --output output/weekly-candidates.json `
-  --wordcloud output/industry-wordcloud.svg `
+  --wordcloud output/industry-wordcloud.png `
   --industry-source GeekNews `
   --approval-file output/approval.json `
   --decision-file output/decisions.json `
@@ -42,10 +42,16 @@ python scripts/weekly_candidates.py `
 - `approval.json`: 예은 님이 남기기로 확인한 URL만 넣는 파일입니다. 예: `{ "approved_urls": ["https://example.com/article"] }`
 - `decisions.json`: 검토 상태·이유·실행 가능성 근거를 기록합니다. 예: `{ "decisions": { "https://example.com/article": { "status": "approved", "reason": "기후 시계열 포트폴리오와 직접 연결", "code_available": true, "public_data": true, "modest_compute": true, "portfolio_fit": true } } }`
 - `watchlist.json`: 다음 수집에서 특별히 표시할 기관·주제·행사입니다. 예: `{ "terms": ["ECMWF", "LLM evaluation", "ACL"] }`
-- `industry-wordcloud.svg`: Industry & Product Signals에서 **승인된** 원문 읽기 완료 자료만 반영한 단어 구름. 승인 자료가 없으면 빈 결과를 분명하게 표시
+- `industry-wordcloud.png`: Industry & Product Signals에서 **승인된** 원문 읽기 완료 자료만 반영한 PNG 워드클라우드. Kiwi가 한글 명사를 골라내고, Malgun Gothic 글꼴로 표시합니다. 승인 자료가 없으면 빈 결과를 분명하게 표시합니다.
 - `weekly-cache.json`: 다음 실행에서 이미 본 항목을 다시 후보로 내지 않기 위한 식별값
 
 후보 보고서는 `possible_event_clusters`로 제목이 유사한 자료를 **검토용 묶음**으로 제안합니다. 서로 다른 사건을 잘못 합치지 않도록 자동 삭제하지 않습니다. 상세 요약 프롬프트에는 `Why now?` 항목도 포함됩니다.
+
+처음 한 번은 아래 명령으로 필요한 한글 분석·이미지 라이브러리를 설치합니다.
+
+```powershell
+python -m pip install -r requirements.txt
+```
 
 ## Slack 전송 전 초안
 

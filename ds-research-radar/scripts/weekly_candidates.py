@@ -39,7 +39,14 @@ DEFAULT_KEYWORDS = {
 STOP_WORDS = {
     "the", "and", "for", "with", "from", "into", "that", "this", "your", "how",
     "new", "using", "use", "what", "ai", "llm", "data", "model", "models",
+    "그리고", "하지만", "이번", "기존", "관련", "대한", "통해", "위한", "있는", "하는",
+    "합니다", "됩니다", "있습니다", "것을", "이것", "그것", "저것", "보다", "함께",
 }
+KOREAN_WORDCLOUD_STOP_WORDS = STOP_WORDS | {
+    "기술", "결과", "방식", "기반", "제공", "활용", "분석", "연구", "서비스",
+    "사용", "개선", "지원", "가능", "수준", "통해", "대상", "내용", "기사",
+}
+MALGUN_GOTHIC = Path("C:/Windows/Fonts/malgun.ttf")
 
 
 def article_text(html_text: str, limit: int = 12000) -> str:
@@ -260,10 +267,60 @@ def possible_event_clusters(items: list[dict[str, Any]]) -> list[dict[str, Any]]
 def word_counts(items: list[dict[str, Any]]) -> Counter[str]:
     words = Counter()
     for item in items:
-        for word in re.findall(r"[A-Za-z][A-Za-z0-9_-]{2,}", f"{item['title']} {item.get('summary', '')}".casefold()):
+        for word in re.findall(r"[A-Za-z가-힣][A-Za-z가-힣0-9_-]{1,}", f"{item['title']} {item.get('summary', '')}".casefold()):
+            # Lightweight Korean fallback when a morphological analyzer is unavailable.
+            word = re.sub(r"(은|는|이|가|을|를|의|에|에서|으로|와|과|도|만|까지)$", "", word)
             if word not in STOP_WORDS:
                 words[word] += 1
     return words
+
+
+def korean_word_counts(items: list[dict[str, Any]]) -> Counter[str]:
+    """Count meaningful Korean nouns with Kiwi; keep an English fallback for mixed titles."""
+    try:
+        from kiwipiepy import Kiwi
+    except ImportError:
+        return word_counts(items)
+
+    kiwi = Kiwi()
+    words = Counter()
+    for item in items:
+        text = f"{item['title']} {item.get('summary', '')}"
+        for token in kiwi.tokenize(text):
+            word = token.form.casefold()
+            if token.tag.startswith("N") and len(word) > 1 and word not in KOREAN_WORDCLOUD_STOP_WORDS:
+                words[word] += 1
+        # Kiwi is intentionally noun-first. Keep useful English product names in a mixed-language feed.
+        for word in re.findall(r"[A-Za-z][A-Za-z0-9_-]{1,}", text.casefold()):
+            if word not in KOREAN_WORDCLOUD_STOP_WORDS:
+                words[word] += 1
+    return words
+
+
+def write_wordcloud_png(counts: Counter[str], output_path: Path) -> None:
+    """Write a deterministic Korean PNG word cloud from approved Industry items only."""
+    from PIL import Image, ImageDraw, ImageFont
+    from wordcloud import WordCloud
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if not counts:
+        image = Image.new("RGB", (1200, 600), "white")
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(str(MALGUN_GOTHIC), 34) if MALGUN_GOTHIC.exists() else ImageFont.load_default()
+        draw.text((80, 270), "이번 주 승인된 Industry 자료가 없습니다", font=font, fill="#334155")
+        image.save(output_path, format="PNG")
+        return
+    cloud = WordCloud(
+        font_path=str(MALGUN_GOTHIC) if MALGUN_GOTHIC.exists() else None,
+        width=1200,
+        height=600,
+        background_color="white",
+        colormap="viridis",
+        prefer_horizontal=0.85,
+        random_state=42,
+        collocations=False,
+    ).generate_from_frequencies(dict(counts.most_common(40)))
+    cloud.to_file(str(output_path))
 
 
 def wordcloud_svg(counts: Counter[str], top_n: int = 30) -> str:
@@ -282,7 +339,7 @@ def wordcloud_svg(counts: Counter[str], top_n: int = 30) -> str:
         if y > 245:
             break
         color = ("#2563eb", "#0f766e", "#7c3aed", "#b45309")[index % 4]
-        pieces.append(f'<text x="{x}" y="{y}" font-family="Arial, sans-serif" font-size="{size}" fill="{color}">{html.escape(word)}</text>')
+        pieces.append(f'<text x="{x}" y="{y}" font-family="Malgun Gothic, Arial, sans-serif" font-size="{size}" fill="{color}">{html.escape(word)}</text>')
         x += width
     pieces.append("</svg>")
     return "".join(pieces)
@@ -439,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:
         and item.get("original_read_status") == "read"
         and item["review_status"] == "approved"
     ]
-    arguments.wordcloud.write_text(wordcloud_svg(word_counts(industry)), encoding="utf-8")
+    write_wordcloud_png(korean_word_counts(industry), arguments.wordcloud)
     print(json.dumps(report["summary"], ensure_ascii=False))
     return 0
 
