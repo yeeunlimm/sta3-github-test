@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
-from weekly_candidates import article_text, build_report, feed_items, wordcloud_svg
+from weekly_candidates import actionability, article_text, build_report, feed_items, possible_event_clusters, watchlist_matches, wordcloud_svg
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -110,6 +110,18 @@ class WeeklyCandidateTests(unittest.TestCase):
     def test_article_text_excludes_script_content(self):
         extracted = article_text("<html><script>secret()</script><p>Useful evidence.</p><p>Second finding.</p></html>")
         self.assertEqual(extracted, "Useful evidence. Second finding.")
+
+    def test_actionability_uses_only_explicit_evidence(self):
+        score, evidence = actionability({}, {"code_available": True, "public_data": True, "modest_compute": False})
+        self.assertEqual(score, 60)
+        self.assertEqual(evidence, ["코드 공개", "공개 데이터"])
+        self.assertIsNone(actionability({}, {})[0])
+
+    def test_watchlist_and_event_clusters_are_review_cues(self):
+        first = {"title": "New LLM evaluation benchmark", "summary": "ECMWF is not mentioned", "domains": ["language"], "primary_source_url": "https://example.org/1"}
+        second = {"title": "New LLM evaluation benchmark release", "summary": "", "domains": ["language"], "primary_source_url": "https://example.org/2"}
+        self.assertEqual(watchlist_matches(first, ["LLM evaluation", "ECMWF"]), ["LLM evaluation", "ECMWF"])
+        self.assertEqual(len(possible_event_clusters([first, second])), 1)
 
 
 if __name__ == "__main__":

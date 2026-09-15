@@ -69,7 +69,8 @@ def summary_prompt(item: dict[str, Any]) -> str:
     return (
         "아래 원문만 근거로 한국어 상세 요약을 작성하세요. "
         "(1) 무엇이 발표·연구되었는지 (2) 방법·제품 기능 (3) 수치 또는 근거 "
-        "(4) 한계·미확인 사항 (5) DS 직무 의미 순으로 쓰고, 원문에 없는 사실은 추측하지 마세요.\n\n"
+        "(4) 한계·미확인 사항 (5) DS 직무 의미 (6) Why now: 지금 중요한 이유 순으로 쓰고, "
+        "원문에 없는 사실은 추측하지 마세요.\n\n"
         f"제목: {item['title']}\n출처: {item['primary_source_url']}\n원문: {item.get('original_text', '')}"
     )
 
@@ -191,6 +192,71 @@ def load_approved_urls(path: Path | None) -> set[str]:
     return set(value.get("approved_urls", []))
 
 
+def load_decisions(path: Path | None, approved_urls: set[str]) -> dict[str, dict[str, Any]]:
+    """Load the human review ledger; older approval files remain supported."""
+    decisions: dict[str, dict[str, Any]] = {url: {"status": "approved"} for url in approved_urls}
+    if path is None or not path.exists():
+        return decisions
+    value = json.loads(path.read_text(encoding="utf-8"))
+    for url, decision in value.get("decisions", {}).items():
+        if isinstance(decision, dict):
+            decisions[url] = decision
+    return decisions
+
+
+def load_watchlist_terms(path: Path | None) -> list[str]:
+    if path is None or not path.exists():
+        return []
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return [str(term) for term in value.get("terms", []) if str(term).strip()]
+
+
+def actionability(item: dict[str, Any], decision: dict[str, Any]) -> tuple[int | None, list[str]]:
+    """Score portfolio practicality only from explicit human-verified facts."""
+    checks = (
+        ("code_available", 30, "코드 공개"),
+        ("public_data", 30, "공개 데이터"),
+        ("modest_compute", 20, "개인 규모 연산 가능"),
+        ("accessible_license", 10, "접근 가능한 라이선스"),
+        ("portfolio_fit", 10, "포트폴리오 주제로 적합"),
+    )
+    provided = [check for check in checks if check[0] in decision]
+    if not provided:
+        return None, ["실행 가능성은 코드·데이터·연산 조건을 확인한 뒤 평가"]
+    score = sum(weight for key, weight, _ in provided if decision.get(key) is True)
+    notes = [label for key, _, label in provided if decision.get(key) is True]
+    return score, notes or ["확인된 실행 조건이 부족함"]
+
+
+def watchlist_matches(item: dict[str, Any], terms: list[str]) -> list[str]:
+    haystack = f"{item.get('title', '')} {item.get('summary', '')}".casefold()
+    return [term for term in terms if term.casefold() in haystack]
+
+
+def possible_event_clusters(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Suggest—not merge—similar headlines, so the human can keep distinct events separate."""
+    clusters: list[dict[str, Any]] = []
+    token_sets = [set(re.findall(r"[a-z0-9]{4,}", item.get("title", "").casefold())) for item in items]
+    for left, item in enumerate(items):
+        related = [item]
+        for right in range(left + 1, len(items)):
+            if item.get("domains") != items[right].get("domains"):
+                continue
+            union = token_sets[left] | token_sets[right]
+            similarity = len(token_sets[left] & token_sets[right]) / len(union) if union else 0
+            if similarity >= 0.5:
+                related.append(items[right])
+        if len(related) > 1:
+            urls = sorted(member["primary_source_url"] for member in related)
+            if not any(cluster["urls"] == urls for cluster in clusters):
+                clusters.append({
+                    "suggested_event": item["title"],
+                    "urls": urls,
+                    "reason": "제목 핵심어가 겹쳐 같은 사건일 가능성이 있음; 자동 병합하지 않음",
+                })
+    return clusters
+
+
 def word_counts(items: list[dict[str, Any]]) -> Counter[str]:
     words = Counter()
     for item in items:
@@ -231,6 +297,8 @@ def build_report(
     read_originals: bool = True,
     detail_limit: int = 8,
     approved_urls: set[str] | None = None,
+    decisions: dict[str, dict[str, Any]] | None = None,
+    watchlist_terms: list[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Collect quickly, then read originals only for the filtered review queue."""
     cutoff = now - timedelta(days=7)
@@ -267,16 +335,26 @@ def build_report(
     # A candidate needs a relevant domain; it is still explicitly marked for review.
     review_queue = [item for item in fresh if item["domains"]]
     approved_urls = approved_urls or set()
+    decisions = decisions or {}
+    watchlist_terms = watchlist_terms or []
     for item in review_queue:
-        is_approved = item["primary_source_url"] in approved_urls
-        item["review_status"] = "approved" if is_approved else "pending_human_confirmation"
+        decision = decisions.get(item["primary_source_url"], {})
+        status = decision.get("status", "approved" if item["primary_source_url"] in approved_urls else "pending_human_confirmation")
+        item["review_status"] = status if status in {"approved", "rejected", "later"} else "pending_human_confirmation"
+        item["human_decision_reason"] = decision.get("reason", "")
+        item["actionability_score"], item["actionability_evidence"] = actionability(item, decision)
+        item["watchlist_matches"] = watchlist_matches(item, watchlist_terms)
         item["notion_eligibility"] = "approved_only"
     article_failures: dict[str, str] = {}
     if read_originals:
         review_queue, article_failures = enrich_originals(review_queue, timeout_seconds, detail_limit)
     for item in review_queue:
-        is_approved = item["primary_source_url"] in approved_urls
-        item["review_status"] = "approved" if is_approved else "pending_human_confirmation"
+        decision = decisions.get(item["primary_source_url"], {})
+        status = decision.get("status", "approved" if item["primary_source_url"] in approved_urls else "pending_human_confirmation")
+        item["review_status"] = status if status in {"approved", "rejected", "later"} else "pending_human_confirmation"
+        item["human_decision_reason"] = decision.get("reason", "")
+        item["actionability_score"], item["actionability_evidence"] = actionability(item, decision)
+        item["watchlist_matches"] = watchlist_matches(item, watchlist_terms)
         item["notion_eligibility"] = "approved_only"
     industry_items = [
         item for item in review_queue
@@ -304,6 +382,7 @@ def build_report(
         "source_failures": failures,
         "original_read_failures": article_failures,
         "candidates": review_queue,
+        "possible_event_clusters": possible_event_clusters(review_queue),
         "trend_candidates": sorted(word_counts(industry_items).items(), key=lambda pair: (-pair[1], pair[0]))[:15],
         "notes": [
             "Candidates are not automatically saved to Notion; only a human-approved item can be stored.",
@@ -329,11 +408,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detail-limit", type=int, default=8, help="maximum filtered candidates whose originals are read")
     parser.add_argument("--skip-original-read", action="store_true", help="create a fast metadata-only report")
     parser.add_argument("--approval-file", type=Path, help="JSON file containing {\"approved_urls\": [\"https://...\"]}")
+    parser.add_argument("--decision-file", type=Path, help="JSON review ledger with status, reason, and actionability evidence")
+    parser.add_argument("--watchlist-file", type=Path, help="JSON file containing {\"terms\": [\"ECMWF\", \"LLM evaluation\"]}")
     arguments = parser.parse_args(argv)
     feeds = dict(value.split("=", 1) for value in arguments.feed if "=" in value)
     if not feeds:
         parser.error("at least one --feed NAME=URL is required")
     now = datetime.now(UTC)
+    approved_urls = load_approved_urls(arguments.approval_file)
     report, new_cache = build_report(
         feeds,
         load_cache(arguments.cache),
@@ -342,14 +424,21 @@ def main(argv: list[str] | None = None) -> int:
         arguments.timeout,
         read_originals=not arguments.skip_original_read,
         detail_limit=arguments.detail_limit,
-        approved_urls=load_approved_urls(arguments.approval_file),
+        approved_urls=approved_urls,
+        decisions=load_decisions(arguments.decision_file, approved_urls),
+        watchlist_terms=load_watchlist_terms(arguments.watchlist_file),
     )
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     arguments.cache.parent.mkdir(parents=True, exist_ok=True)
     arguments.cache.write_text(json.dumps(new_cache, ensure_ascii=False, indent=2), encoding="utf-8")
     arguments.wordcloud.parent.mkdir(parents=True, exist_ok=True)
-    industry = [item for item in report["candidates"] if item["source"] in set(arguments.industry_source)]
+    industry = [
+        item for item in report["candidates"]
+        if item["source"] in set(arguments.industry_source)
+        and item.get("original_read_status") == "read"
+        and item["review_status"] == "approved"
+    ]
     arguments.wordcloud.write_text(wordcloud_svg(word_counts(industry)), encoding="utf-8")
     print(json.dumps(report["summary"], ensure_ascii=False))
     return 0

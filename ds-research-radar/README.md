@@ -32,11 +32,17 @@ python scripts/weekly_candidates.py `
   --output output/weekly-candidates.json `
   --wordcloud output/industry-wordcloud.svg `
   --industry-source GeekNews `
-  --approval-file output/approval.json
+  --approval-file output/approval.json `
+  --decision-file output/decisions.json `
+  --watchlist-file output/watchlist.json
 ```
 
 - `weekly-candidates.json`: 최근 7일·중복 제거·관련성 필터를 통과한 검토 후보와 제외 사유 개수
 - `weekly-candidates.json`의 각 후보: 통과 후보만 읽은 원문 발췌, 원문 근거 상세 요약 초안, Codex용 상세 요약 프롬프트. 실제 해석은 원문을 검토하는 Codex 단계에서 생성합니다.
 - `approval.json`: 예은 님이 남기기로 확인한 URL만 넣는 파일입니다. 예: `{ "approved_urls": ["https://example.com/article"] }`
+- `decisions.json`: 검토 상태·이유·실행 가능성 근거를 기록합니다. 예: `{ "decisions": { "https://example.com/article": { "status": "approved", "reason": "기후 시계열 포트폴리오와 직접 연결", "code_available": true, "public_data": true, "modest_compute": true, "portfolio_fit": true } } }`
+- `watchlist.json`: 다음 수집에서 특별히 표시할 기관·주제·행사입니다. 예: `{ "terms": ["ECMWF", "LLM evaluation", "ACL"] }`
 - `industry-wordcloud.svg`: Industry & Product Signals에서 **승인된** 원문 읽기 완료 자료만 반영한 단어 구름. 승인 자료가 없으면 빈 결과를 분명하게 표시
 - `weekly-cache.json`: 다음 실행에서 이미 본 항목을 다시 후보로 내지 않기 위한 식별값
+
+후보 보고서는 `possible_event_clusters`로 제목이 유사한 자료를 **검토용 묶음**으로 제안합니다. 서로 다른 사건을 잘못 합치지 않도록 자동 삭제하지 않습니다. 상세 요약 프롬프트에는 `Why now?` 항목도 포함됩니다.
