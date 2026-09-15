@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
-from weekly_candidates import build_report, feed_items, wordcloud_svg
+from weekly_candidates import article_text, build_report, feed_items, wordcloud_svg
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -53,8 +53,9 @@ class WeeklyCandidateTests(unittest.TestCase):
     def test_wordcloud_is_empty_when_no_industry_candidates(self):
         self.assertIn("No industry candidates", wordcloud_svg(Counter()))
 
+    @patch("weekly_candidates.fetch_article")
     @patch("weekly_candidates.fetch_feed")
-    def test_report_keeps_only_recent_unseen_relevant_candidates(self, mocked_fetch):
+    def test_report_keeps_only_recent_unseen_relevant_candidates(self, mocked_fetch, mocked_article):
         mocked_fetch.return_value = [
             {
                 "title": "Multilingual language model evaluation",
@@ -78,18 +79,37 @@ class WeeklyCandidateTests(unittest.TestCase):
                 "source": "ResearchFeed",
             },
         ]
+        mocked_article.side_effect = lambda item, timeout: {
+            **item,
+            "original_text": "Original report text with evidence.",
+            "original_read_status": "read",
+            "detail_summary_draft": "원문 읽기 초안",
+            "detail_summary_prompt": "요약 프롬프트",
+            "review_status": "pending_human_confirmation",
+            "notion_eligibility": "approved_only",
+        }
         report, cache = build_report(
             {"ResearchFeed": "https://example.org/feed"},
             {"seen_identity_keys": ["primary_source_url:httpsexampleorgseen"]},
             datetime(2026, 9, 15, tzinfo=UTC),
             {"ResearchFeed"},
+            approved_urls={"https://example.org/new"},
         )
         self.assertTrue(report["review_required"])
         self.assertFalse(report["notion_write_performed"])
         self.assertEqual([item["title"] for item in report["candidates"]], ["Multilingual language model evaluation"])
         self.assertEqual(report["summary"]["older_than_7_days_skipped"], 1)
         self.assertEqual(report["summary"]["previously_seen_skipped"], 1)
+        self.assertEqual(report["summary"]["originals_read"], 1)
+        self.assertEqual(report["summary"]["human_approved"], 1)
+        self.assertTrue(report["trend_candidates"])
+        self.assertEqual(report["candidates"][0]["review_status"], "approved")
+        self.assertEqual(report["candidates"][0]["notion_eligibility"], "approved_only")
         self.assertIn("last_successful_run_at", cache)
+
+    def test_article_text_excludes_script_content(self):
+        extracted = article_text("<html><script>secret()</script><p>Useful evidence.</p><p>Second finding.</p></html>")
+        self.assertEqual(extracted, "Useful evidence. Second finding.")
 
 
 if __name__ == "__main__":

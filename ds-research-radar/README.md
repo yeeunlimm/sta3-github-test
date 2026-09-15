@@ -31,9 +31,12 @@ python scripts/weekly_candidates.py `
   --cache output/weekly-cache.json `
   --output output/weekly-candidates.json `
   --wordcloud output/industry-wordcloud.svg `
-  --industry-source GeekNews
+  --industry-source GeekNews `
+  --approval-file output/approval.json
 ```
 
 - `weekly-candidates.json`: 최근 7일·중복 제거·관련성 필터를 통과한 검토 후보와 제외 사유 개수
-- `industry-wordcloud.svg`: Industry & Product Signals용 단어 구름. 후보가 없으면 빈 결과를 분명하게 표시
+- `weekly-candidates.json`의 각 후보: 통과 후보만 읽은 원문 발췌, 원문 근거 상세 요약 초안, Codex용 상세 요약 프롬프트. 실제 해석은 원문을 검토하는 Codex 단계에서 생성합니다.
+- `approval.json`: 예은 님이 남기기로 확인한 URL만 넣는 파일입니다. 예: `{ "approved_urls": ["https://example.com/article"] }`
+- `industry-wordcloud.svg`: Industry & Product Signals에서 **승인된** 원문 읽기 완료 자료만 반영한 단어 구름. 승인 자료가 없으면 빈 결과를 분명하게 표시
 - `weekly-cache.json`: 다음 실행에서 이미 본 항목을 다시 후보로 내지 않기 위한 식별값

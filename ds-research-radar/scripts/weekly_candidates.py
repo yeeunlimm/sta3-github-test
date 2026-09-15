@@ -42,6 +42,38 @@ STOP_WORDS = {
 }
 
 
+def article_text(html_text: str, limit: int = 12000) -> str:
+    """Extract a bounded, readable article body without adding a dependency."""
+    without_noncontent = re.sub(r"<(script|style|noscript|svg)[^>]*>.*?</\\1>", " ", html_text, flags=re.IGNORECASE | re.DOTALL)
+    blocks = re.findall(r"<(?:p|h[1-3]|li|blockquote)[^>]*>(.*?)</(?:p|h[1-3]|li|blockquote)>", without_noncontent, flags=re.IGNORECASE | re.DOTALL)
+    text = " ".join(clean_text(block) for block in blocks if clean_text(block))
+    return text[:limit] if text else clean_text(without_noncontent)[:limit]
+
+
+def extractive_detail_draft(item: dict[str, Any]) -> str:
+    """Make a source-grounded reading draft; semantic interpretation stays human-reviewed."""
+    body = item.get("original_text", "")
+    sentences = re.split(r"(?<=[.!?])\\s+", body)
+    excerpt = " ".join(sentence for sentence in sentences if sentence)[:1200]
+    if not excerpt:
+        return "원문 본문을 추출하지 못했습니다. 링크를 직접 열어 확인하세요."
+    return (
+        f"원문 읽기 초안 — {excerpt}\n\n"
+        "상세 요약 작성 시에는 주장·근거·수치·한계가 원문에 실제로 있는지 확인하고, "
+        "확인되지 않은 해석은 추가하지 마세요."
+    )
+
+
+def summary_prompt(item: dict[str, Any]) -> str:
+    """Package the original text for a model/Codex to create a factual long-form summary."""
+    return (
+        "아래 원문만 근거로 한국어 상세 요약을 작성하세요. "
+        "(1) 무엇이 발표·연구되었는지 (2) 방법·제품 기능 (3) 수치 또는 근거 "
+        "(4) 한계·미확인 사항 (5) DS 직무 의미 순으로 쓰고, 원문에 없는 사실은 추측하지 마세요.\n\n"
+        f"제목: {item['title']}\n출처: {item['primary_source_url']}\n원문: {item.get('original_text', '')}"
+    )
+
+
 def parse_timestamp(value: str | None) -> datetime | None:
     """Parse the common Atom/RSS date forms into UTC."""
     if not value:
@@ -110,10 +142,53 @@ def fetch_feed(name: str, url: str, timeout_seconds: int) -> list[dict[str, Any]
         return feed_items(response.read().decode("utf-8", errors="replace"), name)
 
 
+def fetch_article(item: dict[str, Any], timeout_seconds: int) -> dict[str, Any]:
+    """Read an original only after it passed the lightweight candidate filters."""
+    request = urllib.request.Request(item["primary_source_url"], headers={"User-Agent": "DS-Research-Radar/1.0"})
+    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+        text = response.read().decode("utf-8", errors="replace")
+    enriched = dict(item)
+    enriched["original_text"] = article_text(text)
+    enriched["original_read_status"] = "read"
+    enriched["detail_summary_draft"] = extractive_detail_draft(enriched)
+    enriched["detail_summary_prompt"] = summary_prompt(enriched)
+    enriched["review_status"] = "pending_human_confirmation"
+    enriched["notion_eligibility"] = "approved_only"
+    return enriched
+
+
+def enrich_originals(candidates: list[dict[str, Any]], timeout_seconds: int, limit: int) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Fetch only top candidate originals in parallel; a failed article does not stop the run."""
+    selected = candidates[:limit]
+    failures: dict[str, str] = {}
+    enriched_by_url: dict[str, dict[str, Any]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(6, max(1, len(selected)))) as pool:
+        futures = {pool.submit(fetch_article, item, timeout_seconds): item for item in selected}
+        for future, item in ((future, futures[future]) for future in futures):
+            try:
+                enriched_by_url[item["primary_source_url"]] = future.result()
+            except Exception as error:
+                failed = dict(item)
+                failed["original_read_status"] = "failed"
+                failed["review_status"] = "pending_human_confirmation"
+                failed["notion_eligibility"] = "approved_only"
+                enriched_by_url[item["primary_source_url"]] = failed
+                failures[item["primary_source_url"]] = f"{type(error).__name__}: {error}"
+    return [enriched_by_url.get(item["primary_source_url"], item) for item in candidates], failures
+
+
 def load_cache(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"seen_identity_keys": [], "last_successful_run_at": None}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_approved_urls(path: Path | None) -> set[str]:
+    """Read the human decision file; absence means no item is approved yet."""
+    if path is None or not path.exists():
+        return set()
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return set(value.get("approved_urls", []))
 
 
 def word_counts(items: list[dict[str, Any]]) -> Counter[str]:
@@ -153,8 +228,11 @@ def build_report(
     now: datetime,
     industry_sources: set[str],
     timeout_seconds: int = 12,
+    read_originals: bool = True,
+    detail_limit: int = 8,
+    approved_urls: set[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Fetch in parallel, filter to seven days, deduplicate, and prepare review-only output."""
+    """Collect quickly, then read originals only for the filtered review queue."""
     cutoff = now - timedelta(days=7)
     fetched: list[dict[str, Any]] = []
     failures: dict[str, str] = {}
@@ -188,7 +266,24 @@ def build_report(
 
     # A candidate needs a relevant domain; it is still explicitly marked for review.
     review_queue = [item for item in fresh if item["domains"]]
-    industry_items = [item for item in review_queue if item["source"] in industry_sources]
+    approved_urls = approved_urls or set()
+    for item in review_queue:
+        is_approved = item["primary_source_url"] in approved_urls
+        item["review_status"] = "approved" if is_approved else "pending_human_confirmation"
+        item["notion_eligibility"] = "approved_only"
+    article_failures: dict[str, str] = {}
+    if read_originals:
+        review_queue, article_failures = enrich_originals(review_queue, timeout_seconds, detail_limit)
+    for item in review_queue:
+        is_approved = item["primary_source_url"] in approved_urls
+        item["review_status"] = "approved" if is_approved else "pending_human_confirmation"
+        item["notion_eligibility"] = "approved_only"
+    industry_items = [
+        item for item in review_queue
+        if item["source"] in industry_sources
+        and item.get("original_read_status") == "read"
+        and item["review_status"] == "approved"
+    ]
     report = {
         "generated_at": now.isoformat(),
         "window_start": cutoff.isoformat(),
@@ -202,14 +297,18 @@ def build_report(
             "previously_seen_skipped": len(previous_duplicates),
             "relevance_filtered_out": len(fresh) - len(review_queue),
             "review_candidates": len(review_queue),
+            "originals_read": sum(item.get("original_read_status") == "read" for item in review_queue),
+            "original_read_failures": len(article_failures),
+            "human_approved": sum(item["review_status"] == "approved" for item in review_queue),
         },
         "source_failures": failures,
+        "original_read_failures": article_failures,
         "candidates": review_queue,
         "trend_candidates": sorted(word_counts(industry_items).items(), key=lambda pair: (-pair[1], pair[0]))[:15],
         "notes": [
-            "Candidates are not automatically saved to Notion.",
+            "Candidates are not automatically saved to Notion; only a human-approved item can be stored.",
             "No candidate is a valid outcome; do not add weak material to fill the report.",
-            "Trend words are only a review cue, not a confirmed industry trend.",
+            "Trend words use only original-read Industry & Product Signals candidates and remain a review cue, not a confirmed industry trend.",
         ],
     }
     new_cache = {
@@ -227,12 +326,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wordcloud", type=Path, required=True)
     parser.add_argument("--timeout", type=int, default=12)
+    parser.add_argument("--detail-limit", type=int, default=8, help="maximum filtered candidates whose originals are read")
+    parser.add_argument("--skip-original-read", action="store_true", help="create a fast metadata-only report")
+    parser.add_argument("--approval-file", type=Path, help="JSON file containing {\"approved_urls\": [\"https://...\"]}")
     arguments = parser.parse_args(argv)
     feeds = dict(value.split("=", 1) for value in arguments.feed if "=" in value)
     if not feeds:
         parser.error("at least one --feed NAME=URL is required")
     now = datetime.now(UTC)
-    report, new_cache = build_report(feeds, load_cache(arguments.cache), now, set(arguments.industry_source), arguments.timeout)
+    report, new_cache = build_report(
+        feeds,
+        load_cache(arguments.cache),
+        now,
+        set(arguments.industry_source),
+        arguments.timeout,
+        read_originals=not arguments.skip_original_read,
+        detail_limit=arguments.detail_limit,
+        approved_urls=load_approved_urls(arguments.approval_file),
+    )
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     arguments.cache.parent.mkdir(parents=True, exist_ok=True)
