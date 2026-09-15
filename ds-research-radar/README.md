@@ -46,3 +46,16 @@ python scripts/weekly_candidates.py `
 - `weekly-cache.json`: 다음 실행에서 이미 본 항목을 다시 후보로 내지 않기 위한 식별값
 
 후보 보고서는 `possible_event_clusters`로 제목이 유사한 자료를 **검토용 묶음**으로 제안합니다. 서로 다른 사건을 잘못 합치지 않도록 자동 삭제하지 않습니다. 상세 요약 프롬프트에는 `Why now?` 항목도 포함됩니다.
+
+## Slack 전송 전 초안
+
+아래 명령은 승인된 자료를 `제목 + 1\~2줄 요약 + 원문 링크`로 정리한 Markdown 초안만 만듭니다. Slack에는 어떤 메시지도 보내지 않습니다.
+
+```powershell
+python scripts/slack_draft.py `
+  --report output/weekly-candidates.json `
+  --output output/slack-draft.md `
+  --per-domain 2
+```
+
+초안은 Language 최대 2개, Climate 최대 2개, Industry 최대 2개, Career 최대 2개를 담습니다. 승인 자료가 없으면 “보낼 승인 자료가 없음”만 표시합니다.

@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
+from slack_draft import slack_draft
 from weekly_candidates import actionability, article_text, build_report, feed_items, possible_event_clusters, watchlist_matches, wordcloud_svg
 
 
@@ -122,6 +123,18 @@ class WeeklyCandidateTests(unittest.TestCase):
         second = {"title": "New LLM evaluation benchmark release", "summary": "", "domains": ["language"], "primary_source_url": "https://example.org/2"}
         self.assertEqual(watchlist_matches(first, ["LLM evaluation", "ECMWF"]), ["LLM evaluation", "ECMWF"])
         self.assertEqual(len(possible_event_clusters([first, second])), 1)
+
+    def test_slack_draft_includes_only_approved_title_and_short_summary(self):
+        draft = slack_draft({
+            "generated_at": "2026-09-15T00:00:00+00:00",
+            "candidates": [
+                {"review_status": "approved", "domains": ["language"], "title": "Language finding", "primary_source_url": "https://example.org/language", "summary": "First sentence. Second sentence. Third sentence."},
+                {"review_status": "pending_human_confirmation", "domains": ["climate"], "title": "Do not send", "primary_source_url": "https://example.org/pending", "summary": "Pending."},
+            ],
+        })
+        self.assertIn("<https://example.org/language|Language finding>", draft)
+        self.assertIn("First sentence. Second sentence.", draft)
+        self.assertNotIn("Do not send", draft)
 
 
 if __name__ == "__main__":

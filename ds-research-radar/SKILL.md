@@ -66,4 +66,5 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 - Notion 저장 구조는 [notion-schema.md](references/notion-schema.md)를 사용한다. 먼저 기준 상위 페이지의 `DS Research Radar` 허브와 주제 페이지가 있는지 확인하고, 없을 때만 그 안에 만든다.
 - 새롭고 유용한 항목만 Notion에 저장한다. 저장 결과와 건너뛴 중복 수를 함께 보고한다.
 - Slack에는 전체 자료가 아닌, 각 도메인의 상위 2개와 가장 의미 있는 직무 신호 1개만 보낸다. 실제 전송은 사용자가 요청한 경우에만 한다.
+- [slack_draft.py](scripts/slack_draft.py)는 승인된 자료만 `제목 + 1~2줄 요약 + 원문 링크` 형태의 Slack 초안으로 만든다. 이 스크립트는 메시지를 보내지 않으며, 실제 Slack 전송은 사용자가 명시적으로 요청한 뒤에만 별도 단계로 한다.
 - 최종 결과는 [output-format.md](references/output-format.md)의 형식을 따르되, 근거가 부족한 섹션은 `이번 수집에서는 신뢰할 만한 새 신호를 찾지 못함`으로 짧게 표시한다.
