@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
-from trend_detector import compare_topics
+from trend_detector import classify_trend, compare_topics
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -53,6 +53,15 @@ class TrendComparisonTests(unittest.TestCase):
     def test_ignores_items_without_primary_source(self):
         actual = compare_topics([], [{"type": "Paper", "topics": ["RAG"]}])
         self.assertEqual(actual, {})
+
+    def test_classifies_evidence_backed_trends(self):
+        self.assertEqual(classify_trend({"previous_total": 0, "current_total": 3, "current_breadth": 2}), "Emerging")
+        self.assertEqual(classify_trend({"previous_total": 4, "current_total": 6, "current_breadth": 2}), "Growing")
+        self.assertEqual(classify_trend({"previous_total": 5, "current_total": 4, "current_breadth": 2}), "Established")
+        self.assertEqual(classify_trend({"previous_total": 5, "current_total": 2, "current_breadth": 1}), "Cooling")
+
+    def test_keeps_weak_evidence_unclear(self):
+        self.assertEqual(classify_trend({"previous_total": 0, "current_total": 2, "current_breadth": 1}), "Unclear")
 
 
 if __name__ == "__main__":
