@@ -7,10 +7,10 @@
 ```text
 기준 상위 페이지
 └── DS Research Radar
-    └── Research Items (데이터베이스 표)
+    └── 본문에 펼친 Research Items 데이터베이스 표
 ```
 
-`Research Items`의 행이 모든 조사 자료의 유일한 저장 위치다. 자료별로 별도 상위 페이지를 만들지 않는다. Language와 Climate는 같은 표 안의 `Domain` 값과 필터 보기로 구분한다.
+`Research Items`의 행이 모든 조사 자료의 유일한 저장 위치다. 표는 `DS Research Radar` 본문에서 바로 보이게 유지하고, 자료별로 별도 상위 페이지를 만들지 않는다. Language와 Climate는 같은 표 안의 `Domain` 값과 필터 보기로 구분한다.
 
 권장 속성은 아래와 같다. 실제 데이터베이스에 없는 속성은 사용자의 확인 후 추가한다.
 
