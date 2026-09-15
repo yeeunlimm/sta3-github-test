@@ -7,6 +7,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
+from trend_detector import compare_topics
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -35,6 +36,23 @@ class ScoringTests(unittest.TestCase):
     def test_invalid_signal_is_rejected(self):
         with self.assertRaises(ValueError):
             score({"novelty": 1.1})
+
+
+class TrendComparisonTests(unittest.TestCase):
+    def test_compares_signal_count_and_breadth(self):
+        previous = [
+            {"type": "Paper", "topics": ["LLM evaluation"], "primary_source_url": "a"},
+        ]
+        current = [
+            {"type": "Paper", "topics": ["LLM evaluation"], "primary_source_url": "b"},
+            {"type": "Job", "topics": ["LLM evaluation"], "primary_source_url": "c"},
+        ]
+        actual = compare_topics(previous, current)["LLM evaluation"]
+        self.assertEqual(actual, {"previous_total": 1, "current_total": 2, "previous_breadth": 1, "current_breadth": 2})
+
+    def test_ignores_items_without_primary_source(self):
+        actual = compare_topics([], [{"type": "Paper", "topics": ["RAG"]}])
+        self.assertEqual(actual, {})
 
 
 if __name__ == "__main__":
