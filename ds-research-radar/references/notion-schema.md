@@ -1,4 +1,4 @@
-# Notion 데이터베이스 구조
+# Notion 페이지 구조
 
 ## 배치 규칙
 
@@ -7,12 +7,20 @@
 ```text
 기준 상위 페이지
 └── DS Research Radar
-    └── 본문에 펼친 Research Items 데이터베이스 표
+    ├── Language Research
+    │   └── 논문·기사별 개별 페이지
+    ├── Climate Research
+    │   └── 논문·기관 발표별 개별 페이지
+    ├── Model Radar
+    │   └── 모델별 개별 페이지
+    ├── DS Career & Skills
+    │   └── 채용 공고·역량 지도별 개별 페이지
+    └── Research Items (선택: 과거 기록 보관용)
 ```
 
-`Research Items`의 행이 모든 조사 자료의 유일한 저장 위치다. 표는 `DS Research Radar` 본문에서 바로 보이게 유지하고, 자료별로 별도 상위 페이지를 만들지 않는다. Language와 Climate는 같은 표 안의 `Domain` 값과 필터 보기로 구분한다.
+`DS Research Radar`는 길 안내를 하는 허브다. 읽을 내용은 주제 페이지 아래의 자료별 개별 페이지 본문에 저장한다. 자료 페이지에는 긴 요약, 직접 링크, 새로움, 한계, 직무 연결점을 적어 표 칸을 펼치지 않아도 읽을 수 있게 한다. `Research Items`가 남아 있다면 새 자료를 저장하는 중심이 아니라, 이전 기록·중복 확인을 위한 보관함이다.
 
-권장 속성은 아래와 같다. 실제 데이터베이스에 없는 속성은 사용자의 확인 후 추가한다.
+선택적으로 기존 보관 표를 유지할 때만 아래 속성을 사용한다. 실제 데이터베이스에 없는 속성은 사용자의 확인 후 추가한다.
 
 | 속성 | 형식 | 의미 |
 | --- | --- | --- |
@@ -27,11 +35,7 @@
 | What's New | 텍스트 | 새 신호 |
 | Compared With | 텍스트 | 비교 대상 |
 | DS Relevance Score | 숫자 | 0–100 |
-| Evidence Quality | 선택 | High / Medium / Low |
 | Skills | 다중 선택 | 관련 역량 |
 | Trend | 선택 | Emerging / Growing / Established / Cooling / Unclear |
-| Primary Source URL | URL | 1차 출처 |
-| Supporting Source URL | URL | 보조 출처 |
-| Status | 선택 | New / Reading / Read / Saved / Project Candidate |
 
-중복 확인은 `Primary Source URL`을 최우선으로 하고, 논문이면 DOI·arXiv ID, 그다음 정규화 제목+기관을 사용한다.
+중복 확인은 개별 페이지 본문의 1차 출처 URL을 최우선으로 하고, 논문이면 DOI·arXiv ID, 그다음 정규화 제목+기관을 사용한다.
