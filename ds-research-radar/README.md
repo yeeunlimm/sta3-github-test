@@ -20,3 +20,20 @@
 PowerShell에서 아래 명령으로 결정적인 계산 도구를 확인합니다.
 
 `python -m unittest discover -s tests -v`
+
+## 빠른 주간 후보 수집
+
+여러 RSS/Atom 주소를 동시에 읽어 최근 7일의 **후보만** 만듭니다. 결과는 사람이 검토하기 전까지 Notion이나 Slack으로 보내지지 않습니다. 생성되는 후보 파일은 Git에 올리지 않습니다.
+
+```powershell
+python scripts/weekly_candidates.py `
+  --feed "GeekNews=https://news.hada.io/rss/news" `
+  --cache output/weekly-cache.json `
+  --output output/weekly-candidates.json `
+  --wordcloud output/industry-wordcloud.svg `
+  --industry-source GeekNews
+```
+
+- `weekly-candidates.json`: 최근 7일·중복 제거·관련성 필터를 통과한 검토 후보와 제외 사유 개수
+- `industry-wordcloud.svg`: Industry & Product Signals용 단어 구름. 후보가 없으면 빈 결과를 분명하게 표시
+- `weekly-cache.json`: 다음 실행에서 이미 본 항목을 다시 후보로 내지 않기 위한 식별값

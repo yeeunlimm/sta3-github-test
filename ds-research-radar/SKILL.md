@@ -31,6 +31,13 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 4. 새 항목은 [deduplicate.py](scripts/deduplicate.py)로 후보 목록 안의 반복도 제거한다.
 5. 새 항목이 아닌 과거 자료는 현재 자료의 방법·비교 기준·세대 변화를 설명할 때만 `Research Lineage`로 넣는다. 그 외에는 가져오지 않는다.
 
+## 빠른 주간 후보 수집
+
+- [weekly_candidates.py](scripts/weekly_candidates.py)는 여러 Atom/RSS 피드를 **동시에** 받아 제목·날짜·짧은 설명만으로 후보 보고서를 만든다. 원문 전체를 순서대로 읽지 않으므로 수집 시간이 길어지는 것을 줄인다.
+- 실행마다 최근 7일 자료만 남기고, 수집 안의 중복과 이전 실행에서 확인한 URL·DOI·arXiv ID 중복을 제외한다. 날짜가 없는 자료는 이번 자동 후보에서는 건너뛴다.
+- 출력은 `review_required: true`인 후보 목록이다. 후보가 0개여도 정상이며, 이 단계에서는 Notion 저장과 Slack 전송을 절대 하지 않는다. 사람이 원문·중복·품질을 확인한 항목만 다음 단계에서 저장한다.
+- `Industry & Product Signals`로 지정한 피드에서만 단어 구름과 추세 후보를 만들며, 단어 빈도는 확정된 산업 추세가 아니라 검토 단서로 표시한다.
+
 ## 분석 방식
 
 - 논문은 [paper-analysis.md](references/paper-analysis.md)의 질문·방법·새로움·결과·비교·한계·DS 의미·계보 항목으로 정리한다.

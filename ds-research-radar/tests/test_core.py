@@ -1,12 +1,16 @@
 import sys
 import unittest
+from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from deduplicate import unique_items
 from scoring import score
+from weekly_candidates import build_report, feed_items, wordcloud_svg
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -35,6 +39,57 @@ class ScoringTests(unittest.TestCase):
     def test_invalid_signal_is_rejected(self):
         with self.assertRaises(ValueError):
             score({"novelty": 1.1})
+
+
+class WeeklyCandidateTests(unittest.TestCase):
+    def test_atom_feed_extracts_lightweight_metadata(self):
+        entries = feed_items(
+            """<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Embedding retrieval</title><link href="https://example.org/post"/><updated>2026-09-14T00:00:00Z</updated><summary>AI search system</summary></entry></feed>""",
+            "GeekNews",
+        )
+        self.assertEqual(entries[0]["title"], "Embedding retrieval")
+        self.assertEqual(entries[0]["primary_source_url"], "https://example.org/post")
+
+    def test_wordcloud_is_empty_when_no_industry_candidates(self):
+        self.assertIn("No industry candidates", wordcloud_svg(Counter()))
+
+    @patch("weekly_candidates.fetch_feed")
+    def test_report_keeps_only_recent_unseen_relevant_candidates(self, mocked_fetch):
+        mocked_fetch.return_value = [
+            {
+                "title": "Multilingual language model evaluation",
+                "primary_source_url": "https://example.org/new",
+                "published_at": "2026-09-14T00:00:00Z",
+                "summary": "A benchmark for LLM evaluation.",
+                "source": "ResearchFeed",
+            },
+            {
+                "title": "Old climate paper",
+                "primary_source_url": "https://example.org/old",
+                "published_at": "2026-08-31T00:00:00Z",
+                "summary": "Climate research.",
+                "source": "ResearchFeed",
+            },
+            {
+                "title": "Previously read AI evaluation",
+                "primary_source_url": "https://example.org/seen",
+                "published_at": "2026-09-14T00:00:00Z",
+                "summary": "LLM evaluation.",
+                "source": "ResearchFeed",
+            },
+        ]
+        report, cache = build_report(
+            {"ResearchFeed": "https://example.org/feed"},
+            {"seen_identity_keys": ["primary_source_url:httpsexampleorgseen"]},
+            datetime(2026, 9, 15, tzinfo=UTC),
+            {"ResearchFeed"},
+        )
+        self.assertTrue(report["review_required"])
+        self.assertFalse(report["notion_write_performed"])
+        self.assertEqual([item["title"] for item in report["candidates"]], ["Multilingual language model evaluation"])
+        self.assertEqual(report["summary"]["older_than_7_days_skipped"], 1)
+        self.assertEqual(report["summary"]["previously_seen_skipped"], 1)
+        self.assertIn("last_successful_run_at", cache)
 
 
 if __name__ == "__main__":
