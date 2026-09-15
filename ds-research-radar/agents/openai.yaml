@@ -1,0 +1,6 @@
+interface:
+  display_name: "DS Research Radar"
+  short_description: "언어·기후 AI의 근거 중심 DS 리서치 레이더"
+  default_prompt: "Use $ds-research-radar to research recent Language AI developments for a Data Scientist career."
+policy:
+  allow_implicit_invocation: true
