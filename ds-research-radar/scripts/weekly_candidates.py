@@ -298,9 +298,8 @@ def korean_word_counts(items: list[dict[str, Any]]) -> Counter[str]:
 
 
 def write_wordcloud_png(counts: Counter[str], output_path: Path) -> None:
-    """Write a Korean PNG word cloud using the same flow as the workshop notebook."""
+    """Write a deterministic Korean PNG word cloud from approved Industry items only."""
     from PIL import Image, ImageDraw, ImageFont
-    import matplotlib.pyplot as plt
     from wordcloud import WordCloud
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -311,25 +310,17 @@ def write_wordcloud_png(counts: Counter[str], output_path: Path) -> None:
         draw.text((80, 270), "이번 주 승인된 Industry 자료가 없습니다", font=font, fill="#334155")
         image.save(output_path, format="PNG")
         return
-    # Rebuild text from the noun frequencies so WordCloud can use its familiar
-    # generate_from_text() API while preserving Kiwi's Korean noun filtering.
-    text_for_wc = " ".join(word for word, count in counts.items() for _ in range(count))
     cloud = WordCloud(
         font_path=str(MALGUN_GOTHIC) if MALGUN_GOTHIC.exists() else None,
-        background_color="lightgrey",
-        width=800,
-        height=800,
+        width=1200,
+        height=600,
+        background_color="white",
         colormap="viridis",
         prefer_horizontal=0.85,
         random_state=42,
         collocations=False,
-    )
-    my_cloud = cloud.generate_from_text(text_for_wc)
-    fig, axis = plt.subplots(figsize=(10, 10))
-    axis.imshow(my_cloud)
-    axis.axis("off")
-    fig.savefig(output_path, format="png", bbox_inches="tight", pad_inches=0.1, dpi=120)
-    plt.close(fig)
+    ).generate_from_frequencies(dict(counts.most_common(40)))
+    cloud.to_file(str(output_path))
 
 
 def wordcloud_svg(counts: Counter[str], top_n: int = 30) -> str:
