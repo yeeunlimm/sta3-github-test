@@ -27,7 +27,7 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 
 1. 후보마다 1차 출처 URL, DOI 또는 arXiv ID, 제목·기관·발표일을 확보한다.
 2. Notion에서 `Primary Source URL`, DOI/arXiv ID, 정규화한 제목+기관 순으로 중복을 찾는다. 같은 내용의 기사만 다른 경우도 하나로 본다.
-3. 이미 저장된 항목은 `Skipped—already in Notion`으로 기록하고 저장·Slack 전송 후보에서 제외한다.
+3. 같은 **논문**을 다시 분석해야 할 때는 기존 논문 페이지를 찾는다. 같은 식별자면 새 페이지를 만들지 않고 그 페이지와 대응 보고서를 완전 분석 결과로 갱신한다. 식별자가 다른 새 논문만 새 하위페이지 후보가 된다.
 4. 새 항목은 [deduplicate.py](scripts/deduplicate.py)로 후보 목록 안의 반복도 제거한다.
 5. 새 항목이 아닌 과거 자료는 현재 자료의 방법·비교 기준·세대 변화를 설명할 때만 `Research Lineage`로 넣는다. 그 외에는 가져오지 않는다.
 
@@ -46,21 +46,18 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 ## 서브에이전트 실행 방식
 
 - 주간 실행에는 [subagent-workflow.md](references/subagent-workflow.md)를 따른다. `Language Research`, `Climate Research`, `Industry & Product Signals`, `DS Career & Skills` 담당을 서로 독립적으로 병렬 실행하고, 네 결과가 모두 끝난 뒤에만 결과 검토 담당을 실행한다.
-- 논문 후보는 아래 **필수 논문 학습 워크플로**에 따라 구조·핵심 내용, 배경지식, 근거·세부 검증의 3개 역할을 병렬 실행한 뒤 원문 기준으로 통합한다. 통합 보고서는 반드시 `notes/[concept-name]-report.md`에 쓴다. 1~2줄 뉴스 요약이나 목차형 요약만으로 논문 분석 완료라고 표시하지 않는다.
+- 새 논문 후보마다 **논문 분석 담당 에이전트 1명**을 배정한다. 이 담당은 아래 **필수 논문 학습 워크플로**의 구조·핵심 내용, 배경지식, Figure·Table·수식 근거 검증을 모두 수행해 원문 기준으로 통합한다. 통합 보고서는 반드시 `notes/[concept-name]-report.md`에 쓴다. 1~2줄 뉴스 요약이나 목차형 요약만으로 논문 분석 완료라고 표시하지 않는다.
 - 결과 검토 담당은 중복·날짜·원문 URL·요약과 원문의 일치·사실/해석 구분만 판단한다. 새 자료를 추가하거나 Notion 저장 결정을 대신하지 않는다.
 - Slack 발송 담당은 검토 통과 후보만 도메인별 최대 2개씩 별도 메시지로 보낸다. 예은 님이 ✅ 반응을 남긴 후보만 다음 실행에서 Notion의 알맞은 하위페이지에 저장한다.
 
 ## 논문 학습 보고서 — 예외 없는 필수 형식
 
-논문을 새로 정리하거나 기존 논문 페이지를 보완할 때는 [subagent-workflow.md](references/subagent-workflow.md)의 **논문 분석 3인조**와 아래 결과물을 생략 없이 적용한다.
+논문을 새로 정리하거나 기존 논문 페이지를 보완할 때는 [subagent-workflow.md](references/subagent-workflow.md)의 **논문당 단일 분석 담당**과 아래 결과물을 생략 없이 적용한다.
 
-1. **구조·핵심 내용 담당**: Problem Statement, Contribution, Method, Experiments, Limitations를 논문 Section·Page 근거와 함께 정리한다.
-2. **배경지식 담당**: 선수지식·용어·사전에 알아야 할 개념을 Glossary로 만들고, 추가 학습이 필요하면 이유와 함께 표시한다.
-3. **근거·세부 검증 담당**: Figure·Table·수식·Notation을 확인하고 주장과 근거를 연결한다. 근거가 약하거나 원문에서 확인되지 않는 주장은 명시적으로 표시한다.
-4. 세 담당의 결과가 모두 나온 뒤에만 통합한다. 해석이 다르면 원문을 기준으로 조정하고, 원문 이상의 단정은 하지 않는다.
-5. 통합 파일에는 반드시 **Executive Summary, Glossary, Paper Walkthrough, Concept Map, Method Diagram, Evidence Table, Caveats, Open Questions, Follow-up Reading**을 이 순서로 넣는다. Mermaid가 맞는 Concept Map·Method Diagram은 Markdown-native Mermaid로 작성한다.
-6. 모든 중요한 문장에는 가능한 범위에서 Section·Page·Figure·Table 위치를 붙이고, **논문 직접 주장 / 실험·데이터가 실제로 보여주는 내용 / 우리의 해석**을 분리한다. 원문에 없는 모델명·수치·결론은 추정해 채우지 않는다.
-7. 회사 블로그, 데이터셋 공개, 제품 기사처럼 논문 원문이 아닌 자료는 논문 분석 보고서로 위장하지 않는다. 자료 유형에 맞는 기사·제품 요약으로만 정리한다.
+1. **논문 분석 담당**: Problem Statement, Contribution, Method, Experiments, Limitations, 선수지식·Glossary, Figure·Table·수식·Notation 검증을 원문에서 모두 확인한다.
+2. 담당은 중요한 문장마다 가능한 범위에서 Section·Page·Figure·Table 위치를 붙이고, **논문 직접 주장 / 실험·데이터가 실제로 보여주는 내용 / 우리의 해석**을 분리한다. 원문에 없는 모델명·수치·결론은 추정해 채우지 않는다.
+3. 통합 파일에는 반드시 **Executive Summary, Glossary, Paper Walkthrough, Concept Map, Method Diagram, Evidence Table, Caveats, Open Questions, Follow-up Reading**을 이 순서로 넣는다. Mermaid가 맞는 Concept Map·Method Diagram은 Markdown-native Mermaid로 작성한다.
+4. 회사 블로그, 데이터셋 공개, 제품 기사처럼 논문 원문이 아닌 자료는 논문 분석 보고서로 위장하지 않는다. 자료 유형에 맞는 기사·제품 요약으로만 정리한다.
 
 ## 분석 방식
 
@@ -78,7 +75,8 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 - `Industry & Product Signals`에는 실제 제품·서비스·데이터·인프라 운영 사례 기사만 넣는다. 주제 페이지 맨 위에서 '무엇이 만들어졌나 / 확인된 사례 / 초기 추세 / DS 의미'를 4열 이하 표로 비교하고, 기사는 각각 상세 하위페이지로 둔다.
 - 논문·기사·모델·채용 공고·역량 지도는 반드시 알맞은 주제 페이지 아래의 **개별 하위페이지**로 저장한다. 각 자료 페이지 본문에는 긴 요약, 무엇이 새로웠는지, 한계, DS 직무 연결, 클릭 가능한 1차 출처 링크를 넣는다. 연구 주제 페이지 맨 위에는 `자료 / 성격 / 모델·방법 / 핵심 통찰`의 4열 이하 비교 표를 둬, 상세 페이지를 열기 전에 읽을 자료를 고를 수 있게 한다.
 - `DS Career & Skills` 아래는 `채용 공고`와 `역량 & 포트폴리오`로 나눈다. 채용 공고는 한국 근무의 신입 또는 체험형 인턴을 기본 대상으로 회사·역할별 개별 페이지로, 역량·포트폴리오는 사용자의 실제 포트폴리오 근거를 읽어 지원 우선순위와 보완 과제를 정리한 개별 페이지로 저장한다.
-- 같은 자료는 새 하위페이지를 만들지 않는다. 기존 페이지를 확인하고, 연구 계보로 꼭 필요한 연결만 짧게 추가한다.
+- 같은 논문은 새 하위페이지를 만들지 않고 그 논문 페이지만 갱신한다. 식별자가 다른 새 논문은 새 하위페이지로 추가한다. 연구 계보 연결은 꼭 필요한 경우에만 짧게 추가한다.
+- 논문 저장은 **논문 단위 upsert**다. URL·DOI/arXiv ID·정규화 제목+기관이 같은 기존 논문 하위페이지가 있으면 그 **같은 논문 페이지**와 대응 `notes/[concept-name]-report.md`를 완전 분석 결과로 덮어쓴다. 새 논문이면 해당 도메인 아래 새 하위페이지 1개와 새 보고서 파일을 추가한다. 어떤 경우에도 다른 논문 페이지나 주제 상위페이지를 덮어쓰지 않는다.
 - 기존 `Research Items` 표가 있으면 과거 기록·중복 확인용으로만 보관한다. 새 수집의 기본 읽기 화면이나 필수 저장 위치로 사용하지 않는다.
 
 ## 저장과 전달
