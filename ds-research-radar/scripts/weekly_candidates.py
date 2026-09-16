@@ -141,7 +141,13 @@ def feed_items(xml_text: str, source: str) -> list[dict[str, Any]]:
 
 def candidate_domains(item: dict[str, Any]) -> list[str]:
     text = f"{item.get('title', '')} {item.get('summary', '')}".casefold()
-    return [domain for domain, words in DEFAULT_KEYWORDS.items() if any(word in text for word in words)]
+    def matches(keyword: str) -> bool:
+        # English terms need token boundaries: "intern" must not match "Internet".
+        if re.fullmatch(r"[a-z0-9 -]+", keyword):
+            return bool(re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", text))
+        return keyword in text
+
+    return [domain for domain, words in DEFAULT_KEYWORDS.items() if any(matches(word) for word in words)]
 
 
 def fetch_feed(name: str, url: str, timeout_seconds: int) -> list[dict[str, Any]]:

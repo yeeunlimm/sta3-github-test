@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from deduplicate import unique_items
 from scoring import score
 from slack_draft import slack_draft
-from weekly_candidates import approved_industry_items_for_wordcloud, actionability, article_text, build_report, feed_items, korean_word_counts, possible_event_clusters, watchlist_matches, word_counts, wordcloud_svg, write_wordcloud_png
+from weekly_candidates import approved_industry_items_for_wordcloud, actionability, article_text, build_report, candidate_domains, feed_items, korean_word_counts, possible_event_clusters, watchlist_matches, word_counts, wordcloud_svg, write_wordcloud_png
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -43,6 +43,14 @@ class ScoringTests(unittest.TestCase):
 
 
 class WeeklyCandidateTests(unittest.TestCase):
+    def test_career_keyword_does_not_match_internet(self):
+        self.assertNotIn("career", candidate_domains({
+            "title": "Internet Archive traffic protection", "summary": ""
+        }))
+        self.assertIn("career", candidate_domains({
+            "title": "Data analyst intern recruitment", "summary": ""
+        }))
+
     def test_atom_feed_extracts_lightweight_metadata(self):
         entries = feed_items(
             """<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Embedding retrieval</title><link href="https://example.org/post"/><updated>2026-09-14T00:00:00Z</updated><summary>AI search system</summary></entry></feed>""",
