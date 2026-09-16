@@ -43,6 +43,13 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 - `Actionability Score`는 코드 공개, 공개 데이터, 개인 규모 연산 가능, 접근 가능한 라이선스, 포트폴리오 적합성이 **명시적으로 확인된 것만** 합산한다. DS 관련성이 높더라도 재현하기 어려우면 이 점수는 낮거나 미평가일 수 있다.
 - 관심 목록의 기관·주제·행사 용어가 후보에 실제로 나타나면 표시한다. 제목이 비슷한 후보는 같은 사건일 가능성으로 묶어 제안하되, 자동 병합·삭제하지 않는다.
 
+## 서브에이전트 실행 방식
+
+- 주간 실행에는 [subagent-workflow.md](references/subagent-workflow.md)를 따른다. `Language Research`, `Climate Research`, `Industry & Product Signals`, `DS Career & Skills` 담당을 서로 독립적으로 병렬 실행하고, 네 결과가 모두 끝난 뒤에만 결과 검토 담당을 실행한다.
+- 논문 후보는 구조·핵심 내용, 배경지식, 근거·세부 검증의 3개 역할을 병렬 실행한 뒤 원문 기준으로 통합한다. 통합 보고서는 `notes/[concept-name]-report.md`에 쓴다.
+- 결과 검토 담당은 중복·날짜·원문 URL·요약과 원문의 일치·사실/해석 구분만 판단한다. 새 자료를 추가하거나 Notion 저장 결정을 대신하지 않는다.
+- Slack 발송 담당은 검토 통과 후보만 도메인별 최대 2개씩 별도 메시지로 보낸다. 예은 님이 ✅ 반응을 남긴 후보만 다음 실행에서 Notion의 알맞은 하위페이지에 저장한다.
+
 ## 분석 방식
 
 - 논문은 [paper-analysis.md](references/paper-analysis.md)의 질문·방법·새로움·결과·비교·한계·DS 의미·계보 항목으로 정리한다.

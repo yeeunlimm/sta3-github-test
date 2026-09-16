@@ -23,6 +23,8 @@ PowerShell에서 아래 명령으로 결정적인 계산 도구를 확인합니�
 
 ## 빠른 주간 후보 수집
 
+주간 흐름은 `Language / Climate / Industry / Career` 조사 담당 4명이 동시에 후보를 만들고, 별도 검토 담당이 중복·날짜·원문 일치를 확인한 뒤 Slack 발송 담당에게 넘기는 방식입니다. 자세한 역할과 논문 3인조 분석 보고서 형식은 [subagent-workflow.md](references/subagent-workflow.md)를 참고합니다.
+
 여러 RSS/Atom 주소를 동시에 읽어 최근 7일의 **후보만** 만듭니다. 결과는 사람이 검토하기 전까지 Notion이나 Slack으로 보내지지 않습니다. 생성되는 후보 파일은 Git에 올리지 않습니다.
 
 ```powershell
