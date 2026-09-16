@@ -57,7 +57,7 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 1. **논문 분석 담당**: Problem Statement, Contribution, Method, Experiments, Limitations, 선수지식·Glossary, Figure·Table·수식·Notation 검증을 원문에서 모두 확인한다.
 2. 담당은 중요한 문장마다 가능한 범위에서 Section·Page·Figure·Table 위치를 붙이고, **논문 직접 주장 / 실험·데이터가 실제로 보여주는 내용 / 우리의 해석**을 분리한다. 원문에 없는 모델명·수치·결론은 추정해 채우지 않는다.
 3. 통합 파일에는 반드시 **Executive Summary, Glossary, Paper Walkthrough, Concept Map, Method Diagram, Evidence Table, Caveats, Open Questions, Follow-up Reading**을 이 순서로 넣는다. Mermaid가 맞는 Concept Map·Method Diagram은 Markdown-native Mermaid로 작성한다.
-4. 회사 블로그, 데이터셋 공개, 제품 기사처럼 논문 원문이 아닌 자료는 논문 분석 보고서로 위장하지 않는다. 자료 유형에 맞는 기사·제품 요약으로만 정리한다.
+4. 회사 블로그, 데이터셋 공개, 제품 기사처럼 논문 원문이 아닌 자료도 동일한 9개 섹션으로 분석한다. 다만 Paper Walkthrough는 `자료 Walkthrough`로 읽고, 원문에 Figure·Table·수식·통제 실험이 없으면 Evidence Table과 Caveats에 `원문에서 제공하지 않음`이라고 명시한다. 자료 유형을 논문으로 잘못 표시하거나 없는 실험 결과를 만들지 않는다.
 
 ## 분석 방식
 
