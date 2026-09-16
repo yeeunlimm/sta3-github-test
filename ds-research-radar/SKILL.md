@@ -46,13 +46,25 @@ description: 언어 AI와 기후·환경 AI를 분리해, 데이터 사이언티
 ## 서브에이전트 실행 방식
 
 - 주간 실행에는 [subagent-workflow.md](references/subagent-workflow.md)를 따른다. `Language Research`, `Climate Research`, `Industry & Product Signals`, `DS Career & Skills` 담당을 서로 독립적으로 병렬 실행하고, 네 결과가 모두 끝난 뒤에만 결과 검토 담당을 실행한다.
-- 논문 후보는 구조·핵심 내용, 배경지식, 근거·세부 검증의 3개 역할을 병렬 실행한 뒤 원문 기준으로 통합한다. 통합 보고서는 `notes/[concept-name]-report.md`에 쓴다.
+- 논문 후보는 아래 **필수 논문 학습 워크플로**에 따라 구조·핵심 내용, 배경지식, 근거·세부 검증의 3개 역할을 병렬 실행한 뒤 원문 기준으로 통합한다. 통합 보고서는 반드시 `notes/[concept-name]-report.md`에 쓴다. 1~2줄 뉴스 요약이나 목차형 요약만으로 논문 분석 완료라고 표시하지 않는다.
 - 결과 검토 담당은 중복·날짜·원문 URL·요약과 원문의 일치·사실/해석 구분만 판단한다. 새 자료를 추가하거나 Notion 저장 결정을 대신하지 않는다.
 - Slack 발송 담당은 검토 통과 후보만 도메인별 최대 2개씩 별도 메시지로 보낸다. 예은 님이 ✅ 반응을 남긴 후보만 다음 실행에서 Notion의 알맞은 하위페이지에 저장한다.
 
+## 논문 학습 보고서 — 예외 없는 필수 형식
+
+논문을 새로 정리하거나 기존 논문 페이지를 보완할 때는 [subagent-workflow.md](references/subagent-workflow.md)의 **논문 분석 3인조**와 아래 결과물을 생략 없이 적용한다.
+
+1. **구조·핵심 내용 담당**: Problem Statement, Contribution, Method, Experiments, Limitations를 논문 Section·Page 근거와 함께 정리한다.
+2. **배경지식 담당**: 선수지식·용어·사전에 알아야 할 개념을 Glossary로 만들고, 추가 학습이 필요하면 이유와 함께 표시한다.
+3. **근거·세부 검증 담당**: Figure·Table·수식·Notation을 확인하고 주장과 근거를 연결한다. 근거가 약하거나 원문에서 확인되지 않는 주장은 명시적으로 표시한다.
+4. 세 담당의 결과가 모두 나온 뒤에만 통합한다. 해석이 다르면 원문을 기준으로 조정하고, 원문 이상의 단정은 하지 않는다.
+5. 통합 파일에는 반드시 **Executive Summary, Glossary, Paper Walkthrough, Concept Map, Method Diagram, Evidence Table, Caveats, Open Questions, Follow-up Reading**을 이 순서로 넣는다. Mermaid가 맞는 Concept Map·Method Diagram은 Markdown-native Mermaid로 작성한다.
+6. 모든 중요한 문장에는 가능한 범위에서 Section·Page·Figure·Table 위치를 붙이고, **논문 직접 주장 / 실험·데이터가 실제로 보여주는 내용 / 우리의 해석**을 분리한다. 원문에 없는 모델명·수치·결론은 추정해 채우지 않는다.
+7. 회사 블로그, 데이터셋 공개, 제품 기사처럼 논문 원문이 아닌 자료는 논문 분석 보고서로 위장하지 않는다. 자료 유형에 맞는 기사·제품 요약으로만 정리한다.
+
 ## 분석 방식
 
-- 논문은 [paper-analysis.md](references/paper-analysis.md)의 질문·방법·새로움·결과·비교·한계·DS 의미·계보 항목으로 정리한다.
+- 논문은 위 **논문 학습 보고서 — 예외 없는 필수 형식**을 따른다. [paper-analysis.md](references/paper-analysis.md)는 후보 선별을 위한 짧은 확인표로만 사용하며, 최종 논문 보고서를 대체하지 않는다.
 - 새 모델은 [model-comparison.md](references/model-comparison.md)에 따라 이전 세대와 같은 기준의 벤치마크만 비교한다. 수치가 없거나 기준이 다르면 비교 불가라고 쓴다.
 - 채용 공고는 여러 최근 공고의 반복 신호를 묶어 핵심·새롭게 늘어나는·도메인 특화 역량으로 나눈다. 한 공고의 요구를 시장 전체 경향으로 일반화하지 않는다.
 - [scoring.py](scripts/scoring.py)의 100점 기준으로 읽기 우선순위를 정한다. 근거가 약하면 점수도 보수적으로 매긴다.

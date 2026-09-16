@@ -54,6 +54,8 @@ flowchart LR
 
 논문이 후보를 통과했을 때에만 아래 세 역할을 병렬로 실행한다. 셋의 결과가 모일 때까지 기다린 후, Language 또는 Climate 담당이 원문을 기준으로 충돌을 조정한다.
 
+> **완료 기준:** 세 역할 중 하나라도 빠졌거나, Figure·Table·수식·Notation을 원문에서 확인하지 못했는데 그 사실을 표시하지 않았다면 분석은 완료가 아닙니다. 짧은 뉴스 요약은 논문 학습 보고서를 대체할 수 없습니다.
+
 | 역할 | 맡길 일 | 반드시 남길 것 |
 |---|---|---|
 | 구조·핵심 내용 분석 | Problem, Contribution, Method, Experiments, Limitations | Section/Page 근거와 논문 전체 흐름 |
@@ -71,6 +73,8 @@ flowchart LR
 7. Caveats
 8. Open Questions
 9. Follow-up Reading
+
+각 섹션에서 논문이 직접 주장한 것, 실험·데이터가 실제로 보여주는 것, 이를 바탕으로 한 우리의 해석을 구분한다. 중요한 문장에는 가능한 경우 Section·Page·Figure·Table 위치를 붙인다. 근거가 없으면 비워 두지 말고 `원문에서 확인되지 않음` 또는 `추가 검증 필요`라고 쓴다.
 
 시각화는 구조가 충분히 단순할 때만 Mermaid를 사용한다. 논문 Figure를 재현하지 않으며, 설명용 그림은 원문 그림과 구분해 `개념 설명용`이라고 표시한다.
 
