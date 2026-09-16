@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from deduplicate import unique_items
 from scoring import score
 from slack_draft import slack_draft
-from weekly_candidates import actionability, article_text, build_report, feed_items, korean_word_counts, possible_event_clusters, watchlist_matches, word_counts, wordcloud_svg, write_wordcloud_png
+from weekly_candidates import approved_industry_items_for_wordcloud, actionability, article_text, build_report, feed_items, korean_word_counts, possible_event_clusters, watchlist_matches, word_counts, wordcloud_svg, write_wordcloud_png
 
 
 class DeduplicationTests(unittest.TestCase):
@@ -68,6 +68,25 @@ class WeeklyCandidateTests(unittest.TestCase):
             self.assertEqual(output.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
         finally:
             output.unlink(missing_ok=True)
+
+    def test_wordcloud_input_deduplicates_same_industry_article(self):
+        first = {
+            "title": "Data agent launch",
+            "primary_source_url": "https://example.org/data-agent",
+            "source": "IndustryFeed",
+            "original_read_status": "read",
+            "review_status": "approved",
+        }
+        duplicate = {**first, "primary_source_url": "https://example.org/data-agent/"}
+        distinct = {
+            **first,
+            "title": "Agent runtime launch",
+            "primary_source_url": "https://example.org/agent-runtime",
+        }
+        result = approved_industry_items_for_wordcloud(
+            [first, duplicate, distinct], {"IndustryFeed"}
+        )
+        self.assertEqual([item["title"] for item in result], ["Data agent launch", "Agent runtime launch"])
 
     @patch("weekly_candidates.fetch_article")
     @patch("weekly_candidates.fetch_feed")

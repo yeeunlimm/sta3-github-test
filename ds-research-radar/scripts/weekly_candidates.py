@@ -297,6 +297,26 @@ def korean_word_counts(items: list[dict[str, Any]]) -> Counter[str]:
     return words
 
 
+def approved_industry_items_for_wordcloud(
+    items: list[dict[str, Any]], industry_sources: set[str]
+) -> list[dict[str, Any]]:
+    """Keep one copy of each reviewed Industry article before counting its words.
+
+    Word frequency must stay intact inside an individual article so that the cloud
+    can show its emphasis. Article identity, however, is deduplicated again here
+    as a defensive boundary: a manual review export must not inflate a term just
+    because the same URL, DOI, or title was collected from two sources.
+    """
+    eligible = [
+        item for item in items
+        if item["source"] in industry_sources
+        and item.get("original_read_status") == "read"
+        and item.get("review_status") == "approved"
+    ]
+    unique, _ = unique_items(eligible)
+    return unique
+
+
 def write_wordcloud_png(counts: Counter[str], output_path: Path) -> None:
     """Write a deterministic Korean PNG word cloud from approved Industry items only."""
     from PIL import Image, ImageDraw, ImageFont
@@ -490,12 +510,9 @@ def main(argv: list[str] | None = None) -> int:
     arguments.cache.parent.mkdir(parents=True, exist_ok=True)
     arguments.cache.write_text(json.dumps(new_cache, ensure_ascii=False, indent=2), encoding="utf-8")
     arguments.wordcloud.parent.mkdir(parents=True, exist_ok=True)
-    industry = [
-        item for item in report["candidates"]
-        if item["source"] in set(arguments.industry_source)
-        and item.get("original_read_status") == "read"
-        and item["review_status"] == "approved"
-    ]
+    industry = approved_industry_items_for_wordcloud(
+        report["candidates"], set(arguments.industry_source)
+    )
     write_wordcloud_png(korean_word_counts(industry), arguments.wordcloud)
     print(json.dumps(report["summary"], ensure_ascii=False))
     return 0
